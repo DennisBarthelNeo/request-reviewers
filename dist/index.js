@@ -9664,28 +9664,26 @@ exports.RequestReviewers = void 0;
 const core = __importStar(__nccwpck_require__(4385));
 const github = __importStar(__nccwpck_require__(4293));
 class RequestReviewers {
-    async requestReviewers() {
+    async performAction() {
         const actor = github.context.actor;
-        console.log(actor);
-        console.log(github.context.issue);
-        console.log(github.context.repo);
-        console.log(github.context.issue);
-        const teamMembers = await this.getTeamMembers();
-        console.log(teamMembers);
+        const org = github.context.repo.owner;
+        const octokit = github.getOctokit(this.getGithubToken());
+        const teamMembers = await this.getTeamMembers({
+            octokit,
+            org,
+            teams: this.getTeams(),
+        });
         const shouldRequestReviewers = teamMembers.includes(actor);
         if (shouldRequestReviewers) {
-            const octokit = github.getOctokit(this.getGithubToken());
-            await octokit.rest.pulls.requestReviewers({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                pull_number: github.context.issue.number,
-                reviewers: teamMembers.filter((member) => member !== actor),
+            await this.requestReviewers({
+                actor,
+                octokit,
+                teamMembers,
             });
         }
     }
-    async getTeamMembers() {
-        const octokit = github.getOctokit(this.getGithubToken());
-        const org = github.context.repo.owner;
+    async getTeamMembers(input) {
+        const { octokit, org } = input;
         const teams = core.getInput("teams").split(",");
         const teamMembers = [];
         for await (const team of teams) {
@@ -9699,8 +9697,21 @@ class RequestReviewers {
         }
         return teamMembers;
     }
+    async requestReviewers(input) {
+        const { actor, octokit, teamMembers } = input;
+        const reviewers = teamMembers.filter((member) => member !== actor);
+        await octokit.rest.pulls.requestReviewers({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            pull_number: github.context.issue.number,
+            reviewers,
+        });
+    }
     getGithubToken() {
         return core.getInput("token");
+    }
+    getTeams() {
+        return core.getInput("teams").split(",");
     }
 }
 exports.RequestReviewers = RequestReviewers;
@@ -9891,7 +9902,7 @@ var exports = __webpack_exports__;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const request_reviewers_1 = __nccwpck_require__(4921);
 (async () => {
-    new request_reviewers_1.RequestReviewers().requestReviewers();
+    new request_reviewers_1.RequestReviewers().performAction();
 })();
 
 })();

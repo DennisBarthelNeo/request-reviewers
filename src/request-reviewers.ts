@@ -1,35 +1,45 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
+import { Octokit } from "@octokit/core";
+import { Api } from "@octokit/plugin-rest-endpoint-methods/dist-types/types";
+
+type TeamMembersInput = {
+  octokit: Octokit & Api;
+  org: string;
+  teams: string[];
+};
+
+type RequestReviewersInput = {
+  octokit: Octokit & Api;
+  teamMembers: string[];
+  actor: string;
+};
 
 class RequestReviewers {
-  public async requestReviewers(): Promise<void> {
+  public async performAction(): Promise<void> {
     const actor = github.context.actor;
+    const org = github.context.repo.owner;
+    const octokit = github.getOctokit(this.getGithubToken());
 
-    console.log(actor);
-    console.log(github.context.issue);
-    console.log(github.context.repo);
-    console.log(github.context.issue);
-
-    const teamMembers = await this.getTeamMembers();
-
-    console.log(teamMembers);
+    const teamMembers = await this.getTeamMembers({
+      octokit,
+      org,
+      teams: this.getTeams(),
+    });
 
     const shouldRequestReviewers = teamMembers.includes(actor);
 
     if (shouldRequestReviewers) {
-      const octokit = github.getOctokit(this.getGithubToken());
-      await octokit.rest.pulls.requestReviewers({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        pull_number: github.context.issue.number,
-        reviewers: teamMembers.filter((member) => member !== actor),
+      await this.requestReviewers({
+        actor,
+        octokit,
+        teamMembers,
       });
     }
   }
 
-  private async getTeamMembers(): Promise<string[]> {
-    const octokit = github.getOctokit(this.getGithubToken());
-    const org = github.context.repo.owner;
+  private async getTeamMembers(input: TeamMembersInput): Promise<string[]> {
+    const { octokit, org } = input;
 
     const teams = core.getInput("teams").split(",");
 
@@ -49,8 +59,25 @@ class RequestReviewers {
     return teamMembers;
   }
 
+  private async requestReviewers(input: RequestReviewersInput): Promise<void> {
+    const { actor, octokit, teamMembers } = input;
+
+    const reviewers = teamMembers.filter((member) => member !== actor);
+
+    await octokit.rest.pulls.requestReviewers({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      pull_number: github.context.issue.number,
+      reviewers,
+    });
+  }
+
   private getGithubToken(): string {
     return core.getInput("token");
+  }
+
+  private getTeams(): string[] {
+    return core.getInput("teams").split(",");
   }
 }
 
