@@ -1,12 +1,12 @@
-name: 'Request Reviewers by Teams',
-description: 'Automatically request reviewers on our PR',
+name: "Request Reviewers by Teams"
+description: "Automatically request reviewers on our PR"
 inputs:
   teams:
-    description: 'Teams',
+    description: "Teams"
     required: true
   token:
-    description: 'GitHub Token',
+    description: "GitHub Token"
     required: true
 runs:
-  using: 'node18',
-  main: 'dist/index.js'
+  using: "node18"
+  main: "dist/index.js"
