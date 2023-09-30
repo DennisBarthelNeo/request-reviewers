@@ -1,4 +1,4 @@
-name: 'Request Reviewers',
+name: 'Request Reviewers by Teams',
 description: 'Automatically request reviewers on our PR',
 inputs:
   teams:
