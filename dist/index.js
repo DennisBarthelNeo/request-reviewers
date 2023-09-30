@@ -9668,13 +9668,15 @@ class RequestReviewers {
         const actor = github.context.actor;
         const org = github.context.repo.owner;
         const octokit = github.getOctokit(this.getGithubToken());
+        const teams = this.getTeams();
         const teamMembers = await this.getTeamMembers({
             octokit,
             org,
-            teams: this.getTeams(),
+            teams,
         });
         const shouldRequestReviewers = teamMembers.includes(actor);
         if (shouldRequestReviewers) {
+            core.info(`${actor} is a member of ${teams}. Request all members as reviewers.`);
             await this.requestReviewers({
                 actor,
                 octokit,
